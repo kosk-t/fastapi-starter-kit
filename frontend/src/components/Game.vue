@@ -97,19 +97,27 @@ export default {
       player.dx = -player.speed;
     }
 
-    function keyDown(e) {
-      if (e.key === 'ArrowRight' || e.key === 'Right') {
+    const keys = {};
+
+    const keyDown = (e) => {
+      keys[e.key] = true;
+      if (keys['ArrowRight'] || keys['Right']) {
         moveRight();
-      } else if (e.key === 'ArrowLeft' || e.key === 'Left') {
+      } else if (keys['ArrowLeft'] || keys['Left']) {
         moveLeft();
       }
-    }
+    };
 
-    function keyUp(e) {
-      if (e.key === 'ArrowRight' || e.key === 'Right' || e.key === 'ArrowLeft' || e.key === 'Left') {
+    const keyUp = (e) => {
+      keys[e.key] = false;
+      if (!keys['ArrowRight'] && !keys['Right'] && !keys['ArrowLeft'] && !keys['Left']) {
         player.dx = 0;
+      } else if (keys['ArrowRight'] || keys['Right']) {
+        moveRight();
+      } else if (keys['ArrowLeft'] || keys['Left']) {
+        moveLeft();
       }
-    }
+    };
 
     document.addEventListener('keydown', keyDown);
     document.addEventListener('keyup', keyUp);
