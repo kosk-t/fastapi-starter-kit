@@ -1,41 +1,16 @@
 <template>
   <div id="app">
-    <h1>Item List</h1>
-    <ul>
-      <li v-for="item in items" :key="item.id">{{ item.name }}</li>
-    </ul>
-    <h2>Create Item</h2>
-    <input v-model="newItem.name" placeholder="Item name" />
-    <button @click="createItem">Create</button>
+    <nav>
+      <router-link to="/">Home</router-link>
+      <router-link to="/game">Game</router-link>
+    </nav>
+    <router-view></router-view>
   </div>
 </template>
 
 <script>
-import api from './api';
-
 export default {
-  data() {
-    return {
-      items: [],
-      newItem: {
-        name: ''
-      }
-    };
-  },
-  methods: {
-    async fetchItems() {
-      const response = await api.getItems();
-      this.items = response.data;
-    },
-    async createItem() {
-      await api.createItem(this.newItem);
-      this.newItem.name = '';
-      this.fetchItems();
-    }
-  },
-  created() {
-    this.fetchItems();
-  }
+  name: 'App'
 };
 </script>
 
@@ -44,5 +19,19 @@ export default {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   text-align: center;
   margin-top: 60px;
+}
+
+nav {
+  margin-bottom: 20px;
+}
+
+nav a {
+  margin: 0 10px;
+  text-decoration: none;
+  color: #42b983;
+}
+
+nav a.router-link-exact-active {
+  font-weight: bold;
 }
 </style>

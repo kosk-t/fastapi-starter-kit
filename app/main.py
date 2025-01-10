@@ -1,5 +1,8 @@
 from typing import List
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from .models import Item
 from .schemas import ItemCreate, ItemResponse
 from .database import SessionLocal
@@ -37,3 +40,8 @@ async def read_item(item_id: int) -> Item:
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
+
+@app.get("/game", response_class=HTMLResponse)
+async def get_game():
+    game_html = Path("templates/game.html").read_text(encoding='utf-8')
+    return HTMLResponse(content=game_html)
