@@ -38,6 +38,8 @@ export default {
       }
     }
 
+    const bullets = [];
+
     function drawPlayer() {
       context.fillStyle = player.color;
       context.fillRect(player.x, player.y, player.width, player.height);
@@ -50,14 +52,23 @@ export default {
       });
     }
 
+    function drawBullets() {
+      bullets.forEach(bullet => {
+        context.fillStyle = bullet.color;
+        context.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+    }
+
     function clear() {
       context.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     function update() {
+      const now = Date.now();
       clear();
       drawPlayer();
       drawAliens();
+      drawBullets();
       player.x += player.dx;
 
       if (player.x < 0) {
@@ -66,6 +77,22 @@ export default {
       if (player.x + player.width > canvas.width) {
         player.x = canvas.width - player.width;
       }
+
+      // 弾丸を更新
+      bullets.forEach((bullet, bulletIndex) => {
+        bullet.y -= bullet.dy;
+        if (bullet.y + bullet.height < 0) {
+          bullets.splice(bulletIndex, 1); // 画面外に出た弾丸を削除
+        } else {
+          // エイリアンとの衝突判定
+          aliens.forEach((alien, alienIndex) => {
+            if (checkCollision(bullet, alien)) {
+              bullets.splice(bulletIndex, 1); // 弾丸を削除
+              aliens.splice(alienIndex, 1); // エイリアンを削除
+            }
+          });
+        }
+      });
 
       // エイリアンを同じ方向に動かす
       alienMoveCounter++;
@@ -86,6 +113,11 @@ export default {
         }
       }
 
+      if (keys[' '] && now - lastShootTime > 500) { // 0.5秒間隔で弾を発射
+        shoot();
+        lastShootTime = now;
+      }
+
       requestAnimationFrame(update);
     }
 
@@ -97,7 +129,29 @@ export default {
       player.dx = -player.speed;
     }
 
+    function shoot() {
+      const bullet = {
+        x: player.x + player.width / 2 - 2.5,
+        y: player.y,
+        width: 5,
+        height: 10,
+        color: 'red',
+        dy: 5
+      };
+      bullets.push(bullet);
+    }
+
+    const checkCollision = (bullet, alien) => {
+      return (
+        bullet.x < alien.x + alien.width &&
+        bullet.x + bullet.width > alien.x &&
+        bullet.y < alien.y + alien.height &&
+        bullet.y + bullet.height > alien.y
+      );
+    };
+
     const keys = {};
+    let lastShootTime = 0;
 
     const keyDown = (e) => {
       keys[e.key] = true;
