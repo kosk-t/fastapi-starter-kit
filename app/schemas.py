@@ -16,3 +16,17 @@ class ItemResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+# スコアスキーマを追加
+class ScoreBase(BaseModel):
+    score: int
+
+class ScoreCreate(ScoreBase):
+    pass
+
+class ScoreResponse(BaseModel):
+    id: int
+    score: int
+
+    class Config:
+        orm_mode = True

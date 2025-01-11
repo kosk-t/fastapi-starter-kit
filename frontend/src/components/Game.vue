@@ -3,6 +3,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'GameComponent',
   mounted() {
@@ -25,7 +27,7 @@ export default {
     const alienWidth = 40;
     const alienHeight = 20;
     const alienPadding = 10;
-    const alienOffsetTop = 30; // エイリアンの開始位置を下端に近づける //todo 元々は30なので、あとで修正
+    const alienOffsetTop = 450; // エイリアンの開始位置を下端に近づける //todo テスト時は500, 元々は30なので、あとで修正
     const alienOffsetLeft = 30;
     let alienDirection = 1; // エイリアンの移動方向（1: 右, -1: 左）
     let alienMoveCounter = 0; // エイリアンの移動カウンター
@@ -159,6 +161,27 @@ export default {
       context.shadowColor = 'transparent'; // 影をリセット
     }
 
+    function drawYouWin() {
+      context.fillStyle = 'green';
+      context.font = '50px Arial';
+      context.textAlign = 'center'; // テキストを中央揃えに設定
+      context.shadowColor = 'white'; // 影の色を設定
+      context.shadowOffsetX = 4; // 影のX方向のオフセット
+      context.shadowOffsetY = 4; // 影のY方向のオフセット
+      context.shadowBlur = 2; // 影のぼかし効果
+      context.fillText('You Win!!', canvas.width / 2, canvas.height / 2);
+      context.shadowColor = 'transparent'; // 影をリセット
+    }
+
+    async function submitScore() {
+      try {
+        await axios.post('http://localhost:8000/submit_score/', { score });
+        console.log('Score submitted successfully' + score);
+      } catch (error) {
+        console.error('Error submitting score:', error);
+      }
+    }
+
     function update() {
       const now = Date.now();
       clear();
@@ -220,6 +243,13 @@ export default {
 
       if (checkGameOver()) {
         drawGameOver();
+        submitScore(); // ゲームオーバー時にスコアを送信
+        return;
+      }
+
+      if (aliens.length === 0) {
+        drawYouWin();
+        submitScore(); // 勝利時にスコアを送信
         return;
       }
 
