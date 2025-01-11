@@ -39,6 +39,21 @@ export default {
     }
 
     const bullets = [];
+    let score = 0; // スコアを管理する変数
+
+    // 星を管理する配列
+    const stars = [];
+    const numStars = 100;
+
+    // 星を初期化
+    for (let i = 0; i < numStars; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 2,
+        speed: Math.random() * 0.5 + 0.5
+      });
+    }
 
     function drawPlayer() {
       context.fillStyle = player.color;
@@ -59,6 +74,35 @@ export default {
       });
     }
 
+    function drawScore() {
+      context.fillStyle = 'white';
+      context.font = '20px Arial';
+      context.fillText(`Score: ${score}`, 10, 20);
+    }
+
+    function drawBackground() {
+      context.fillStyle = 'black';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 星を描画
+      stars.forEach(star => {
+        context.beginPath();
+        context.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        context.fillStyle = 'white';
+        context.fill();
+      });
+    }
+
+    function updateBackground() {
+      stars.forEach(star => {
+        star.y += star.speed;
+        if (star.y > canvas.height) {
+          star.y = 0;
+          star.x = Math.random() * canvas.width;
+        }
+      });
+    }
+
     function clear() {
       context.clearRect(0, 0, canvas.width, canvas.height);
     }
@@ -66,9 +110,12 @@ export default {
     function update() {
       const now = Date.now();
       clear();
+      drawBackground(); // 背景を描画
+      updateBackground(); // 背景を更新
       drawPlayer();
       drawAliens();
       drawBullets();
+      drawScore(); // スコアを描画
       player.x += player.dx;
 
       if (player.x < 0) {
@@ -89,6 +136,7 @@ export default {
             if (checkCollision(bullet, alien)) {
               bullets.splice(bulletIndex, 1); // 弾丸を削除
               aliens.splice(alienIndex, 1); // エイリアンを削除
+              score += 10; // スコアを10増加
             }
           });
         }
