@@ -25,7 +25,7 @@ export default {
     const alienWidth = 40;
     const alienHeight = 20;
     const alienPadding = 10;
-    const alienOffsetTop = 30;
+    const alienOffsetTop = 30; // エイリアンの開始位置を下端に近づける //todo 元々は30なので、あとで修正
     const alienOffsetLeft = 30;
     let alienDirection = 1; // エイリアンの移動方向（1: 右, -1: 左）
     let alienMoveCounter = 0; // エイリアンの移動カウンター
@@ -62,10 +62,39 @@ export default {
 
     function drawAliens() {
       aliens.forEach(alien => {
-        context.fillStyle = alien.color;
-        context.fillRect(alien.x, alien.y, alien.width, alien.height);
+        // エイリアンのピクセルデータ (縦縮めたバージョン)
+        const pixelData = [
+          [0, 1, 1, 0, 0, 1, 1, 0],
+          [1, 0, 1, 1, 1, 1, 0, 1],
+          [1, 1, 1, 1, 1, 1, 1, 1],
+          [1, 1, 0, 1, 1, 0, 1, 1],
+          [0, 1, 1, 1, 1, 1, 1, 0],
+          [0, 1, 0, 0, 0, 0, 1, 0],
+          [1, 0, 1, 0, 0, 1, 0, 1],
+          [0, 1, 0, 1, 1, 0, 1, 0]
+        ];
+
+        const blockWidth = alien.width / pixelData[0].length;
+        const blockHeight = (alien.height / pixelData.length) * 0.9; // 高さを縮小
+
+        // ピクセルを描画
+        for (let row = 0; row < pixelData.length; row++) {
+          for (let col = 0; col < pixelData[row].length; col++) {
+            if (pixelData[row][col] === 1) {
+              context.fillStyle = alien.color; // エイリアンの色
+              context.fillRect(
+                alien.x + col * blockWidth,
+                alien.y + row * blockHeight,
+                blockWidth,
+                blockHeight
+              );
+            }
+          }
+        }
       });
     }
+
+
 
     function drawBullets() {
       bullets.forEach(bullet => {
@@ -105,6 +134,29 @@ export default {
 
     function clear() {
       context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ゲームオーバー判定
+    function checkGameOver() {
+      for (let alien of aliens) {
+        // エイリアンが画面下に到達した場合、またはプレイヤーとエイリアンが衝突した場合
+        if (alien.y + alien.height >= canvas.height || checkCollision(alien, player)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function drawGameOver() {
+      context.fillStyle = 'red';
+      context.font = '50px Arial';
+      context.textAlign = 'center'; // テキストを中央揃えに設定
+      context.shadowColor = 'white'; // 影の色を設定
+      context.shadowOffsetX = 4; // 影のX方向のオフセット
+      context.shadowOffsetY = 4; // 影のY方向のオフセット
+      context.shadowBlur = 2; // 影のぼかし効果
+      context.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+      context.shadowColor = 'transparent'; // 影をリセット
     }
 
     function update() {
@@ -166,6 +218,11 @@ export default {
         lastShootTime = now;
       }
 
+      if (checkGameOver()) {
+        drawGameOver();
+        return;
+      }
+
       requestAnimationFrame(update);
     }
 
@@ -188,13 +245,14 @@ export default {
       };
       bullets.push(bullet);
     }
-
-    const checkCollision = (bullet, alien) => {
+    
+    // 二つの矩形が重なっているかどうかを判定する関数
+    const checkCollision = (rect1, rect2) => {
       return (
-        bullet.x < alien.x + alien.width &&
-        bullet.x + bullet.width > alien.x &&
-        bullet.y < alien.y + alien.height &&
-        bullet.y + bullet.height > alien.y
+        rect1.x < rect2.x + rect2.width &&
+        rect1.x + rect1.width > rect2.x &&
+        rect1.y < rect2.y + rect2.height &&
+        rect1.y + rect1.height > rect2.y
       );
     };
 
