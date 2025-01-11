@@ -1,12 +1,15 @@
 from typing import List
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from .models import Item
-from .schemas import ItemCreate, ItemResponse
-from .database import SessionLocal
+from app.models import Item, Score
+from app.schemas import ItemCreate, ItemResponse, ScoreCreate, ScoreResponse
+from app.database import SessionLocal
 from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
@@ -45,3 +48,17 @@ async def read_item(item_id: int) -> Item:
 async def get_game():
     game_html = Path("templates/game.html").read_text(encoding='utf-8')
     return HTMLResponse(content=game_html)
+
+@app.post("/submit_score/", response_model=ScoreResponse)
+async def submit_score(score: ScoreCreate) -> Score:
+    db = SessionLocal()
+    db_score = Score(score=score.score)
+    db.add(db_score)
+    db.commit()
+    db.refresh(db_score)
+    return db_score
+
+if __name__ == "__main__":
+    import uvicorn
+    logging.info("Starting Uvicorn server...")
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
