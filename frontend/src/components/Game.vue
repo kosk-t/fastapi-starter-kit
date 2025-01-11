@@ -404,7 +404,8 @@ export default {
     resumeGame() {
       this.isPaused = false;
       this.gameOver = false; // ゲームオーバー状態をリセット
-      this.update();
+      this.update(); //todo エラー解消する必要あり this.update is not a function TypeError: this.update is not a function
+
     }
   }
 };
