@@ -1,5 +1,14 @@
 <template>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div v-if="isPaused" class="modal">
+      <div class="modal-content">
+        <span class="close" @click="resumeGame">&times;</span>
+        <h2>設定</h2>
+        <!-- 設定内容をここに追加 -->
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -7,9 +16,20 @@ import axios from 'axios';
 
 export default {
   name: 'GameComponent',
+  data() {
+    return {
+      isPaused: false,
+      gameOver: false // ゲームオーバー状態を管理する変数
+    };
+  },
   mounted() {
     const canvas = document.getElementById('gameCanvas');
     const context = canvas.getContext('2d');
+    const backgroundMusic = new Audio(require('@/assets/スペースインベーダー_BOSS_Inst.mp3')); // 音楽ファイルのパスを指定
+    backgroundMusic.loop = true; // ループ再生
+
+    const shootSound = new Audio(require('@/assets/shoot.mp3')); // 弾を撃つ効果音のパスを指定
+    const hitSound = new Audio(require('@/assets/hit.mp3')); // 敵を倒した時の効果音のパスを指定
 
     const player = {
       width: 50,
@@ -27,7 +47,7 @@ export default {
     const alienWidth = 40;
     const alienHeight = 20;
     const alienPadding = 10;
-    const alienOffsetTop = 450; // エイリアンの開始位置を下端に近づける //todo テスト時は500, 元々は30なので、あとで修正
+    const alienOffsetTop = 30; // エイリアンの開始位置を下端に近づける //todo テスト時は500, 元々は30なので、あとで修正
     const alienOffsetLeft = 30;
     let alienDirection = 1; // エイリアンの移動方向（1: 右, -1: 左）
     let alienMoveCounter = 0; // エイリアンの移動カウンター
@@ -41,7 +61,9 @@ export default {
     }
 
     const bullets = [];
+    const enemyBullets = []; // 敵の弾を管理する配列
     let score = 0; // スコアを管理する変数
+    //let gameOver = false; // ゲームオーバー状態を管理する変数
 
     // 星を管理する配列
     const stars = [];
@@ -100,6 +122,13 @@ export default {
 
     function drawBullets() {
       bullets.forEach(bullet => {
+        context.fillStyle = bullet.color;
+        context.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+    }
+
+    function drawEnemyBullets() {
+      enemyBullets.forEach(bullet => {
         context.fillStyle = bullet.color;
         context.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
       });
@@ -182,7 +211,9 @@ export default {
       }
     }
 
-    function update() {
+    const update = () => {
+      if (this.isPaused || this.gameOver) return; // ゲームが一時停止中またはゲームオーバーの場合は更新しない
+
       const now = Date.now();
       clear();
       drawBackground(); // 背景を描画
@@ -190,6 +221,7 @@ export default {
       drawPlayer();
       drawAliens();
       drawBullets();
+      drawEnemyBullets(); // 敵の弾を描画
       drawScore(); // スコアを描画
       player.x += player.dx;
 
@@ -212,8 +244,22 @@ export default {
               bullets.splice(bulletIndex, 1); // 弾丸を削除
               aliens.splice(alienIndex, 1); // エイリアンを削除
               score += 10; // スコアを10増加
+              hitSound.play(); // 敵を倒した時の効果音を再生
             }
           });
+        }
+      });
+
+      // 敵の弾丸を更新
+      enemyBullets.forEach((bullet, bulletIndex) => {
+        bullet.y += bullet.dy;
+        if (bullet.y > canvas.height) {
+          enemyBullets.splice(bulletIndex, 1); // 画面外に出た弾丸を削除
+        } else if (checkCollision(bullet, player)) {
+          drawGameOver();
+          submitScore(); // ゲームオーバー時にスコアを送信
+          this.gameOver = true; // ゲームオーバー状態を設定
+          return;
         }
       });
 
@@ -241,9 +287,26 @@ export default {
         lastShootTime = now;
       }
 
+      // 各列の最前面の敵のみが弾を撃つ
+      if (Math.random() < 0.1) { // 10%の確率で弾を撃つ
+        const frontAliens = [];
+        for (let col = 0; col < cols; col++) {
+          const columnAliens = aliens.filter(alien => alien.x === col * (alienWidth + alienPadding) + alienOffsetLeft);
+          if (columnAliens.length > 0) {
+            const frontAlien = columnAliens.reduce((prev, curr) => (prev.y > curr.y ? prev : curr));
+            frontAliens.push(frontAlien);
+          }
+        }
+        const randomAlien = frontAliens[Math.floor(Math.random() * frontAliens.length)];
+        if (randomAlien) {
+          shootEnemyBullet(randomAlien);
+        }
+      }
+
       if (checkGameOver()) {
         drawGameOver();
         submitScore(); // ゲームオーバー時にスコアを送信
+        this.gameOver = true; // ゲームオーバー状態を設定
         return;
       }
 
@@ -254,7 +317,7 @@ export default {
       }
 
       requestAnimationFrame(update);
-    }
+    };
 
     function moveRight() {
       player.dx = player.speed;
@@ -274,6 +337,23 @@ export default {
         dy: 5
       };
       bullets.push(bullet);
+      if (shootSound.paused) {
+        shootSound.play(); // 弾を撃つ効果音を再生
+      } else {
+        shootSound.currentTime = 0; // 効果音をリセットして再生
+      }
+    }
+
+    function shootEnemyBullet(alien) {
+      const bullet = {
+        x: alien.x + alien.width / 2 - 2.5,
+        y: alien.y + alien.height,
+        width: 5,
+        height: 10,
+        color: 'yellow',
+        dy: 5
+      };
+      enemyBullets.push(bullet);
     }
     
     // 二つの矩形が重なっているかどうかを判定する関数
@@ -295,6 +375,8 @@ export default {
         moveRight();
       } else if (keys['ArrowLeft'] || keys['Left']) {
         moveLeft();
+      } else if (e.key === 'Escape') {
+        this.pauseGame();
       }
     };
 
@@ -312,7 +394,18 @@ export default {
     document.addEventListener('keydown', keyDown);
     document.addEventListener('keyup', keyUp);
 
+    backgroundMusic.play(); // ゲーム開始時に音楽を再生
     update();
+  },
+  methods: {
+    pauseGame() {
+      this.isPaused = true;
+    },
+    resumeGame() {
+      this.isPaused = false;
+      this.gameOver = false; // ゲームオーバー状態をリセット
+      this.update();
+    }
   }
 };
 </script>
@@ -322,5 +415,40 @@ canvas {
   background: black;
   display: block;
   margin: 0 auto;
+}
+
+.modal {
+  display: block;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
 }
 </style>
