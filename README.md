@@ -27,13 +27,16 @@
    python -m venv env
    env\Scripts\activate
    pip install -r requirements.txt
+
+   cd frontend
+   npm install
    ```
 
 3. アプリケーションを起動します。
    ```
-   uvicorn app.main:app --reload
-   ```
+   cd frontend
    npm run dev
+   ```
 
 ## 使用方法
 
