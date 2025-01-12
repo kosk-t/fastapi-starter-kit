@@ -1,12 +1,16 @@
 from typing import List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from .models import Item
+from .models import Item, Shot
 from .schemas import ItemCreate, ItemResponse
-from .database import SessionLocal
+from .database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from datetime import datetime
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -17,6 +21,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# データベースセッションを取得する依存関係
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.post("/items/", response_model=ItemResponse)
 async def create_item(item: ItemCreate) -> Item:
@@ -45,3 +57,11 @@ async def read_item(item_id: int) -> Item:
 async def get_game():
     game_html = Path("templates/game.html").read_text(encoding='utf-8')
     return HTMLResponse(content=game_html)
+
+@app.post("/shots/")
+def create_shot(db: Session = Depends(get_db)):
+    shot = Shot(first_shot_time=datetime.utcnow())
+    db.add(shot)
+    db.commit()
+    db.refresh(shot)
+    return shot
